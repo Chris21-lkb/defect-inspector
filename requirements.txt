@@ -1,0 +1,5 @@
+# Install PyTorch FIRST using the command for your CUDA version from
+# https://pytorch.org/get-started/locally/ (pip would otherwise pick a build
+# that may not match your GPU driver). Then:  pip install -r requirements.txt
+anomalib>=2.0
+pytest>=8.0

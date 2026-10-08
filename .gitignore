@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# defect-inspector: downloaded data and training outputs (large, regenerable)
+datasets/
+results/
+*.ckpt
+*.onnx
+*.xml
+*.bin
