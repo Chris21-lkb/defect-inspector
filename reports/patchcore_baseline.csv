@@ -1,0 +1,6 @@
+category,image_AUROC,image_F1Score,pixel_AUROC,pixel_F1Score,fit_s,test_images,ms_per_image
+screw,0.9641,0.9555,0.9887,0.3702,146.7,160,109.3
+metal_nut,0.9985,0.984,0.9871,0.8409,75.8,115,100.3
+cable,0.991,0.9674,0.9847,0.6397,90.4,150,149.3
+transistor,0.9962,0.9512,0.9736,0.6129,79.4,100,160.6
+MEAN,0.9875,0.9645,0.9835,0.6159,,,
