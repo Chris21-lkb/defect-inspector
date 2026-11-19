@@ -1,0 +1,1 @@
+"""Demo web app for defect-inspector (Phase 6)."""

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>defect-inspector</title>
+<style>
+  /* Simple, readable layout: controls on top, original vs heatmap side by side */
+  body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 32px auto;
+         padding: 0 16px; color: #1d1d1f; background: #fafafa; }
+  h1 { margin-bottom: 4px; }
+  .sub { color: #666; margin-top: 0; }
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+              background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+  button { background: #1d1d1f; color: #fff; border: 0; border-radius: 6px;
+           padding: 10px 18px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #999; cursor: wait; }
+  .images { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .images figure { margin: 0; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 8px; }
+  .images img { width: 100%; border-radius: 4px; }
+  figcaption { font-size: 13px; color: #666; margin-top: 6px; }
+  .verdict { font-size: 22px; font-weight: 700; margin: 20px 0 8px; }
+  .good { color: #1a7f37; } .bad { color: #c62828; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  .bar { height: 10px; background: #c62828; border-radius: 5px; }
+  .note { font-size: 13px; color: #666; }
+  .error { color: #c62828; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>defect-inspector</h1>
+  <p class="sub">PatchCore finds the defect &middot; a vision-language model suggests what it is</p>
+
+  <div class="controls">
+    <select id="category"></select>
+    <input type="file" id="file" accept="image/*">
+    <button id="go">Inspect</button>
+  </div>
+
+  <div id="output"></div>
+
+<script>
+// Fill the category list from the API, so the page never goes out of date
+fetch("/categories").then(r => r.json()).then(list => {
+  const select = document.getElementById("category");
+  list.forEach(c => select.add(new Option(c.replace("_", " "), c)));
+});
+
+document.getElementById("go").addEventListener("click", async () => {
+  const file = document.getElementById("file").files[0];
+  const output = document.getElementById("output");
+  if (!file) { output.innerHTML = '<p class="error">Choose an image first.</p>'; return; }
+
+  // Send the image + category as a form, exactly what POST /inspect expects
+  const form = new FormData();
+  form.append("file", file);
+  form.append("category", document.getElementById("category").value);
+
+  const button = document.getElementById("go");
+  button.disabled = true; button.textContent = "Inspecting...";
+  try {
+    const response = await fetch("/inspect", { method: "POST", body: form });
+    const r = await response.json();
+    if (!response.ok) throw new Error(r.detail || "Request failed");
+    output.innerHTML = render(r, URL.createObjectURL(file));
+  } catch (err) {
+    output.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+  } finally {
+    button.disabled = false; button.textContent = "Inspect";
+  }
+});
+
+function render(r, originalUrl) {
+  const verdict = r.defective
+    ? `<div class="verdict bad">DEFECTIVE</div>`
+    : `<div class="verdict good">GOOD</div>`;
+
+  let html = verdict +
+    `<p>Anomaly score ${r.anomaly_score} &middot; PatchCore ${r.patchcore_ms} ms` +
+    (r.defective ? ` &middot; VLM ${r.vlm_ms} ms` : "") + `</p>` +
+    `<div class="images">
+       <figure><img src="${originalUrl}"><figcaption>Uploaded image</figcaption></figure>
+       <figure><img src="data:image/png;base64,${r.heatmap_png}">
+         <figcaption>Red = areas above PatchCore's defect threshold</figcaption></figure>
+     </div>`;
+
+  if (r.defective) {
+    html += `<h3>Suggested defect type</h3><table>
+      <tr><th>Defect</th><th>Probability</th><th></th></tr>` +
+      r.suggestions.map(s => `<tr><td><b>${s.defect}</b><br><span class="note">${s.description}</span></td>
+        <td>${(s.probability * 100).toFixed(0)}%</td>
+        <td style="width:30%"><div class="bar" style="width:${s.probability * 100}%"></div></td></tr>`).join("") +
+      `</table>
+      <p class="note">Suggestions are for a human inspector to confirm: the naming step was correct
+      46.8% of the time in evaluation (random guessing: about 20%). The good/defective verdict is
+      far more reliable (98.8% mean image AUROC).</p>`;
+  }
+  return html;
+}
+</script>
+</body>
+</html>
