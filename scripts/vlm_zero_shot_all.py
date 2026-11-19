@@ -30,9 +30,9 @@ from transformers import AutoModelForMultimodalLM, AutoProcessor
 # Settings: the only part to edit between runs
 # ---------------------------------------------------------------------------
 
-MODEL_ID = "Qwen/Qwen3.5-2B"
-LOAD_IN_4BIT = False                 # Step 4e: True for the 4B model
-RUN_NAME = "qwen3.5-2b"              # used in the output file names
+MODEL_ID = "Qwen/Qwen3.5-4B"         # Step 4d used "Qwen/Qwen3.5-2B"
+LOAD_IN_4BIT = True                  # Step 4d used False (2B fits in 16-bit)
+RUN_NAME = "qwen3.5-4b-4bit"         # Step 4d used "qwen3.5-2b"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = PROJECT_ROOT / "datasets"
@@ -136,6 +136,9 @@ def defect_score(processor, model, image_path: Path, prompt: str,
     inputs = processor.apply_chat_template(
         messages, add_generation_prompt=True, tokenize=True,
         return_dict=True, return_tensors="pt",
+        # Step 4e: some Qwen3.5 sizes "think" (write reasoning) before answering.
+        # We need the answer word FIRST, so thinking is switched off.
+        enable_thinking=False,
     ).to(model.device)
 
     with torch.no_grad():
