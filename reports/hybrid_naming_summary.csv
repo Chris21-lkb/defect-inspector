@@ -1,0 +1,13 @@
+view,category,n_images,correct,accuracy,chance,most_common_answer,most_common_share
+full,screw,119,31,0.2605,0.2,manipulated_front,0.9328
+full,metal_nut,93,36,0.3871,0.25,bent,0.8817
+full,cable,92,10,0.1087,0.125,poke_insulation,1.0
+full,transistor,40,19,0.475,0.25,bent_lead,0.625
+box,screw,119,45,0.3782,0.2,manipulated_front,0.7731
+box,metal_nut,93,48,0.5161,0.25,bent,0.7204
+box,cable,92,10,0.1087,0.125,poke_insulation,1.0
+box,transistor,40,20,0.5,0.25,bent_lead,0.55
+crop,screw,119,49,0.4118,0.2,manipulated_front,0.563
+crop,metal_nut,93,38,0.4086,0.25,bent,0.8602
+crop,cable,92,10,0.1087,0.125,poke_insulation,1.0
+crop,transistor,40,18,0.45,0.25,cut_lead,0.525
