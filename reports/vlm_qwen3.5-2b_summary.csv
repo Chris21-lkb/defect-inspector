@@ -1,0 +1,6 @@
+category,image_AUROC,ci95_low,ci95_high,unique_scores,mean_mass,ms_per_image
+screw,0.9391,0.8956,0.9724,160,0.6542,607.7
+metal_nut,0.8519,0.7585,0.9374,115,0.3622,332.8
+cable,0.8023,0.7307,0.8693,150,0.713,595.9
+transistor,0.745,0.6216,0.8459,100,0.8342,604.8
+MEAN,0.8346,,,,,
