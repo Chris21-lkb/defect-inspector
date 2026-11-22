@@ -69,14 +69,14 @@ Image AUROC per defect type (each defect type vs the good images of its category
 
 | Visible damage | 2B | 4B | Wrong arrangement | 2B | 4B |
 |---|---|---|---|---|---|
-| transistor `damaged_case` | 0.94 | 0.997 | metal_nut `flip` (upside down) | 0.62 | **0.30** |
-| metal_nut `color` | 0.93 | 0.85 | cable `cable_swap` | 0.53 | 0.57 |
-| screw `thread_side` | 0.96 | 0.94 | cable `missing_cable` | 0.60 | 0.79 |
-| cable `bent_wire` | 0.90 | 0.83 | transistor `misplaced` | **0.42** | 0.53 |
+| transistor `damaged_case` | 0.94 | 0.997 | metal_nut `flip` (upside down) | 0.64 | **0.30** |
+| metal_nut `color` | 0.95 | 0.85 | cable `cable_swap` | 0.51 | 0.57 |
+| screw `thread_side` | 0.97 | 0.94 | cable `missing_cable` | 0.60 | 0.79 |
+| cable `bent_wire` | 0.92 | 0.83 | transistor `misplaced` | **0.43** | 0.53 |
 
 A flipped nut or swapped wires look perfectly normal unless you know what the *correct* part looks like. PatchCore learns that from 200+ good examples; a zero-shot VLM has never seen the product. Scores below 0.5 mean the model rates these defective parts as *more* normal than real good ones.
 
-*(2B values from the 16-bit-score run, step 4c; 4B values from step 4e.)*
+*(From `reports/vlm_qwen3.5-2b_by_defect.csv` and `reports/vlm_qwen3.5-4b-4bit_by_defect.csv`.)*
 
 ### 3. Defect naming: the hybrid and bias calibration
 
