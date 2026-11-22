@@ -1,5 +1,5 @@
 """
-pipeline.py - Phase 6, step 6b of the defect-inspector project.
+pipeline.py - Phase 6, step 6b of the defect-inspector project (heatmap v2).
 
 The inspection pipeline used by the demo app, built from the SAME code that
 was evaluated in Phases 3-5 (imported from scripts/), so the demo behaves
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = PROJECT_ROOT / "models"
@@ -117,9 +117,16 @@ class Inspector:
         result["patchcore_ms"] = round((time.perf_counter() - start) * 1000, 1)
 
         heat = prediction.anomaly_map[0].squeeze().detach().cpu().float().numpy()
-        result["anomaly_score"] = round(float(prediction.pred_score[0]), 4)
+        score = float(prediction.pred_score[0])
+        result["anomaly_score"] = round(score, 4)
         result["defective"] = bool(prediction.pred_label[0])
-        result["heatmap_png"] = overlay_heatmap(image, heat)
+        # Raw heatmap range, kept in the answer to help debugging
+        result["heat_min"] = round(float(heat.min()), 4)
+        result["heat_max"] = round(float(heat.max()), 4)
+
+        # Box around the hottest area (only meaningful for defective parts)
+        box = anomaly_box(heat) if result["defective"] else None
+        result["heatmap_png"] = overlay_heatmap(image, heat, score, box)
 
         # Good parts stop here: there is no defect to name
         if not result["defective"]:
@@ -128,8 +135,8 @@ class Inspector:
             result["vlm_ms"] = 0.0
             return result
 
-        # 2-3. Box around the hottest area, then a close-up crop of it
-        x0, y0, x1, y1 = anomaly_box(heat)
+        # 2-3. Close-up crop of the box
+        x0, y0, x1, y1 = box
         w, h = image.size
         result["box"] = [round(v, 4) for v in (x0, y0, x1, y1)]
         crop = image.crop((int(x0 * w), int(y0 * h), int(x1 * w), int(y1 * h)))
@@ -151,22 +158,44 @@ class Inspector:
         return result
 
 
-def overlay_heatmap(image: Image.Image, heat: np.ndarray) -> str:
-    """Red overlay where the (normalised) anomaly map is above PatchCore's threshold.
+def overlay_heatmap(image: Image.Image, heat: np.ndarray, score: float,
+                    box: tuple[float, float, float, float] | None) -> str:
+    """Draw where PatchCore looks, as a red overlay, plus its box in yellow.
 
-    anomalib normalises anomaly maps so that 0.5 = the decision threshold:
-    below 0.5 nothing is drawn, above it the red becomes stronger.
+    Version 2. The first version assumed the heatmap was on the same 0-1 scale
+    as the image score (0.5 = threshold); on real images it drew nothing, even
+    for a clearly defective screw. This version does not depend on the scale:
+
+      1. RELATIVE heat: rescale this image's heatmap to 0-1 (coolest to hottest),
+         so the most unusual area of the image is always the reddest.
+      2. Multiply by a STRENGTH that grows with the anomaly score
+         (0 below 0.3, full above 0.7), so a clearly good part stays almost clean
+         and a clearly defective one glows. Squaring the relative heat keeps
+         only the hottest areas visible.
+      3. Draw PatchCore's box (when the part is defective) in yellow.
+
     Returned as a base64 PNG string the web page can display directly.
     """
-    heat_img = Image.fromarray(np.clip(heat * 255, 0, 255).astype(np.uint8))
+    low, high = float(heat.min()), float(heat.max())
+    relative = (heat - low) / (high - low) if high > low else np.zeros_like(heat)
+
+    heat_img = Image.fromarray((relative * 255).astype(np.uint8))
     heat_big = np.asarray(heat_img.resize(image.size, Image.BILINEAR)) / 255.0
 
-    alpha = np.clip((heat_big - 0.5) * 2, 0, 1)[..., None] * 0.6   # 0 below threshold
+    strength = float(np.clip((score - 0.3) / 0.4, 0, 1))
+    alpha = (heat_big ** 2)[..., None] * 0.7 * strength
+
     base = np.asarray(image).astype(np.float32)
     red = np.zeros_like(base)
     red[..., 0] = 255
-    blended = (base * (1 - alpha) + red * alpha).astype(np.uint8)
+    blended = Image.fromarray((base * (1 - alpha) + red * alpha).astype(np.uint8))
+
+    if box is not None:
+        w, h = image.size
+        x0, y0, x1, y1 = box
+        ImageDraw.Draw(blended).rectangle([x0 * w, y0 * h, x1 * w, y1 * h],
+                                          outline=(255, 210, 0), width=max(3, w // 200))
 
     buffer = io.BytesIO()
-    Image.fromarray(blended).save(buffer, format="PNG")
+    blended.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode("ascii")

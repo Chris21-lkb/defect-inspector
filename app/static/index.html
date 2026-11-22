@@ -77,12 +77,12 @@ function render(r, originalUrl) {
     : `<div class="verdict good">GOOD</div>`;
 
   let html = verdict +
-    `<p>Anomaly score ${r.anomaly_score} &middot; PatchCore ${r.patchcore_ms} ms` +
+    `<p>Anomaly score ${r.anomaly_score} &middot; heat range ${r.heat_min} to ${r.heat_max} &middot; PatchCore ${r.patchcore_ms} ms` +
     (r.defective ? ` &middot; VLM ${r.vlm_ms} ms` : "") + `</p>` +
     `<div class="images">
        <figure><img src="${originalUrl}"><figcaption>Uploaded image</figcaption></figure>
        <figure><img src="data:image/png;base64,${r.heatmap_png}">
-         <figcaption>Red = areas above PatchCore's defect threshold</figcaption></figure>
+         <figcaption>Red = most unusual areas (stronger when the score is higher) &middot; yellow box = area sent to the VLM</figcaption></figure>
      </div>`;
 
   if (r.defective) {
